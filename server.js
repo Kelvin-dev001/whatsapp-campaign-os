@@ -6,6 +6,7 @@ import { parseMessage } from './parser.js';
 import { sendWhatsAppMessage } from './whatsapp.js';
 import cron from 'node-cron';
 import { generateDailySummary } from './summary.js';
+import { handleManagerQuery } from './manager.js';
 
 const app = express();
 app.use(cors());
@@ -25,7 +26,7 @@ app.get('/webhook', (req, res) => {
   return res.sendStatus(403);
 });
 
-// Webhook receiver (POST)
+// Webhook receiver (POST) with manager routing
 app.post('/webhook', async (req, res) => {
   try {
     const entry = req.body?.entry?.[0];
@@ -38,7 +39,21 @@ app.post('/webhook', async (req, res) => {
     const from = message.from; // phone
     const text = message.text.body;
 
-    // volunteer ward lookup (optional)
+    // Is sender a manager?
+    const { data: mgr, error: mgrError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('phone', from)
+      .eq('campaign_id', CAMPAIGN_ID)
+      .maybeSingle();
+    if (mgrError) console.error(mgrError);
+
+    if (mgr?.role === 'manager') {
+      await handleManagerQuery(from, text, CAMPAIGN_ID);
+      return res.sendStatus(200);
+    }
+
+    // Volunteer flow
     const { data: volunteerRow } = await supabase
       .from('volunteers')
       .select('ward')
@@ -67,7 +82,7 @@ app.post('/webhook', async (req, res) => {
       console.error(error);
       await sendWhatsAppMessage(from, 'Error logging your report. Please try again.');
     } else {
-      await sendWhatsAppMessage(from, `? Received. ${parsed.ward}: ${parsed.type} logged`);
+      await sendWhatsAppMessage(from, `✓ Received. ${parsed.ward}: ${parsed.type} logged`);
     }
 
     res.sendStatus(200);
@@ -77,7 +92,7 @@ app.post('/webhook', async (req, res) => {
   }
 });
 
-// Manager query endpoint (manual/internal use)
+// Manager query endpoint (manual/internal use stays as-is)
 app.post('/manager-query', async (req, res) => {
   const { phone, query } = req.body;
   const q = (query || '').trim().toLowerCase();
@@ -99,7 +114,7 @@ app.post('/manager-query', async (req, res) => {
       .limit(10);
 
     if (error) return res.status(500).json({ error });
-    const lines = data.map((r, i) => `${i+1}. ${r.category} - ${r.description} (${r.ward})`);
+    const lines = data.map((r, i) => `${i + 1}. ${r.category} - ${r.description} (${r.ward})`);
     const msg = `${type.toUpperCase()} (${data.length}):\n` + lines.join('\n');
     await sendWhatsAppMessage(phone, msg || 'None');
     return res.json({ ok: true });
@@ -116,7 +131,7 @@ app.post('/manager-query', async (req, res) => {
       .limit(15);
 
     if (error) return res.status(500).json({ error });
-    const lines = data.map((r, i) => `${i+1}. [${r.type}] ${r.category} - ${r.description}`);
+    const lines = data.map((r, i) => `${i + 1}. [${r.type}] ${r.category} - ${r.description}`);
     const msg = `${ward} Reports (${data.length}):\n` + lines.join('\n');
     await sendWhatsAppMessage(phone, msg || 'None');
     return res.json({ ok: true });
@@ -132,7 +147,7 @@ app.post('/manager-query', async (req, res) => {
       .limit(15);
 
     if (error) return res.status(500).json({ error });
-    const lines = data.map((r, i) => `${i+1}. [${r.ward}] ${r.type} - ${r.description}`);
+    const lines = data.map((r, i) => `${i + 1}. [${r.ward}] ${r.type} - ${r.description}`);
     const msg = `Search "${term}" (${data.length}):\n` + lines.join('\n');
     await sendWhatsAppMessage(phone, msg || 'None');
     return res.json({ ok: true });
