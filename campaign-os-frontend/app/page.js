@@ -128,7 +128,7 @@ const itemRow = {
   padding: 10,
   borderRadius: 10,
   background: '#0d142a',
-  border: '1px solid '#1c2744'
+  border: '1px solid #1c2744'
 };
 
 const badge = {
