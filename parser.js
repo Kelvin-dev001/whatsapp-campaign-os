@@ -1,32 +1,49 @@
-const WARDS = ['nyali', 'kisauni', 'likoni'];
+import { getOrgConfig } from './config/orgConfig.js';
 
-export function parseMessage(text, senderPhone, volunteerWard) {
-  if (!text) return { valid: false, error: 'Empty message' };
+function normalizeType(token, orgConfig) {
+  if (!token) return null;
+  const lower = token.toLowerCase();
+  for (const [normalized, synonyms] of Object.entries(orgConfig.allowedTypes)) {
+    if (normalized === lower) return normalized;
+    if (synonyms.some((s) => s.toLowerCase() === lower)) return normalized;
+  }
+  return null;
+}
 
-  const parts = text.trim().split(/\s+/);
-  const command = parts[0]?.toLowerCase();
-  const allowed = ['report', 'issue', 'incident', 'rumor'];
-
-  if (!allowed.includes(command)) {
-    return { valid: false, error: 'Please start with REPORT, ISSUE, INCIDENT, or RUMOR' };
+/**
+ * Parse a freeform WhatsApp message into structured fields.
+ * Expected shape: TYPE CATEGORY [LOCATION] DESCRIPTION
+ */
+export function parseMessage(text, from, volunteerWard, orgId = 'default') {
+  const orgConfig = getOrgConfig(orgId);
+  const parts = (text || '').trim().split(/\s+/);
+  if (parts.length < 2) {
+    return { valid: false, error: 'Please start with TYPE CATEGORY ... e.g., ISSUE water shortage Likoni' };
   }
 
-  const body = text.slice(command.length).trim();
-  const wardMatch = WARDS.find(w => body.toLowerCase().includes(w));
-  const ward = wardMatch || volunteerWard || 'UNKNOWN';
+  const rawType = parts[0];
+  const normalizedType = normalizeType(rawType, orgConfig);
+  if (!normalizedType) {
+    const allowedList = Object.keys(orgConfig.allowedTypes).join(', ');
+    return { valid: false, error: `Unknown type "${rawType}". Use one of: ${allowedList}` };
+  }
 
-  const bodyParts = body.split(/\s+/);
-  const category = bodyParts[0] || 'uncategorized';
-  const description = body.trim();
+  const category = parts[1] || '';
+  const location = parts.length > 2 ? parts[2] : (volunteerWard || 'UNKNOWN');
+  const descParts = parts.slice(3);
+  const description = descParts.join(' ').trim() || '(no details)';
+
+  if (orgConfig.requireLocation && !location) {
+    const label = orgConfig.labels?.location || 'Location';
+    return { valid: false, error: `${label} is required. Add it after the category.` };
+  }
 
   return {
     valid: true,
-    type: command === 'report' ? 'report'
-         : command === 'issue' ? 'issue'
-         : command === 'incident' ? 'incident'
-         : 'rumor',
+    type: normalizedType,
     category,
-    ward,
-    description
+    ward: location || volunteerWard || 'UNKNOWN',
+    description,
+    raw_message: text
   };
 }

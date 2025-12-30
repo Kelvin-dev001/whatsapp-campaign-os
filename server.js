@@ -7,6 +7,7 @@ import { sendWhatsAppMessage } from './whatsapp.js';
 import cron from 'node-cron';
 import { generateDailySummary } from './summary.js';
 import { handleManagerQuery } from './manager.js';
+import { getOrgConfig } from './config/orgConfig.js';
 
 const app = express();
 app.use(cors());
@@ -14,6 +15,9 @@ app.use(bodyParser.json());
 
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
 const CAMPAIGN_ID = Number(process.env.CAMPAIGN_ID || 1);
+// org preset for parsing/synonyms: e.g., "default" or "campaign"
+const ORG_ID = process.env.ORG_ID || 'default';
+const ORG_CONFIG = getOrgConfig(ORG_ID);
 
 // Webhook verification (GET)
 app.get('/webhook', (req, res) => {
@@ -26,7 +30,7 @@ app.get('/webhook', (req, res) => {
   return res.sendStatus(403);
 });
 
-// Webhook receiver (POST) with manager routing
+// Webhook receiver (POST) with manager routing and org-aware parsing
 app.post('/webhook', async (req, res) => {
   try {
     const entry = req.body?.entry?.[0];
@@ -61,7 +65,7 @@ app.post('/webhook', async (req, res) => {
       .maybeSingle();
 
     const volunteerWard = volunteerRow?.ward;
-    const parsed = parseMessage(text, from, volunteerWard);
+    const parsed = parseMessage(text, from, volunteerWard, ORG_ID);
 
     if (!parsed.valid) {
       await sendWhatsAppMessage(from, parsed.error);
@@ -70,6 +74,7 @@ app.post('/webhook', async (req, res) => {
 
     const { error } = await supabase.from('reports').insert({
       campaign_id: CAMPAIGN_ID,
+      organization_id: ORG_ID, // ensure this column exists in DB
       sender_phone: from,
       type: parsed.type,
       category: parsed.category,
@@ -82,7 +87,8 @@ app.post('/webhook', async (req, res) => {
       console.error(error);
       await sendWhatsAppMessage(from, 'Error logging your report. Please try again.');
     } else {
-      await sendWhatsAppMessage(from, `✓ Received. ${parsed.ward}: ${parsed.type} logged`);
+      const locLabel = ORG_CONFIG.labels?.location || 'Location';
+      await sendWhatsAppMessage(from, `✓ Received. ${locLabel}: ${parsed.ward} | ${parsed.type} logged`);
     }
 
     res.sendStatus(200);
@@ -109,6 +115,7 @@ app.post('/manager-query', async (req, res) => {
       .from('reports')
       .select('category, ward, description, created_at')
       .eq('campaign_id', CAMPAIGN_ID)
+      .eq('organization_id', ORG_ID)
       .eq('type', type)
       .order('created_at', { ascending: false })
       .limit(10);
@@ -126,6 +133,7 @@ app.post('/manager-query', async (req, res) => {
       .from('reports')
       .select('type, category, description, created_at')
       .eq('campaign_id', CAMPAIGN_ID)
+      .eq('organization_id', ORG_ID)
       .ilike('ward', ward)
       .order('created_at', { ascending: false })
       .limit(15);
@@ -142,6 +150,8 @@ app.post('/manager-query', async (req, res) => {
     const { data, error } = await supabase
       .from('reports')
       .select('type, ward, description')
+      .eq('campaign_id', CAMPAIGN_ID)
+      .eq('organization_id', ORG_ID)
       .ilike('description', `%${term}%`)
       .order('created_at', { ascending: false })
       .limit(15);
@@ -163,6 +173,7 @@ app.get('/reports', async (req, res) => {
     .from('reports')
     .select('id, type, category, ward, description, created_at')
     .eq('campaign_id', CAMPAIGN_ID)
+    .eq('organization_id', ORG_ID)
     .order('created_at', { ascending: false })
     .limit(100);
   if (error) return res.status(500).json({ error: error.message });
