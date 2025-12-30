@@ -18,6 +18,19 @@ const CAMPAIGN_ID = Number(process.env.CAMPAIGN_ID || 1);
 const ORG_ID = process.env.ORG_ID || 'default';
 const ORG_CONFIG = getOrgConfig(ORG_ID);
 
+// Helper: normalize a command type using org config synonyms
+function normalizeCmdType(token) {
+  if (!token) return null;
+  const lower = token.toLowerCase();
+  for (const [normalized, synonyms] of Object.entries(ORG_CONFIG.allowedTypes)) {
+    if (normalized === lower) return normalized;
+    if (synonyms.some((s) => s.toLowerCase() === lower)) return normalized;
+    // crude plural trim (deliveries -> deliverie); optional but helps
+    if (lower.endsWith('s') && normalized === lower.slice(0, -1)) return normalized;
+  }
+  return null;
+}
+
 // Webhook verification (GET)
 app.get('/webhook', (req, res) => {
   const mode = req.query['hub.mode'];
@@ -97,11 +110,12 @@ app.post('/webhook', async (req, res) => {
   }
 });
 
-// Manager query endpoint (updated to support all types and org scoping)
+// Manager query endpoint (updated to normalize types)
 app.post('/manager-query', async (req, res) => {
   const { phone, query } = req.body;
-  const q = (query || '').trim().toLowerCase();
-  const allowedTypes = new Set(Object.keys(ORG_CONFIG.allowedTypes));
+  const qRaw = (query || '').trim();
+  const q = qRaw.toLowerCase();
+  const normalized = normalizeCmdType(q);
 
   // TODAY summary
   if (q === 'today') {
@@ -129,27 +143,27 @@ app.post('/manager-query', async (req, res) => {
     return res.json({ ok: true });
   }
 
-  // Dynamic type query: e.g., snag, delivery, alert, etc.
-  if (allowedTypes.has(q)) {
+  // Dynamic type query: e.g., delivery, snag, alert, etc. (normalized)
+  if (normalized) {
     const { data, error } = await supabase
       .from('reports')
       .select('category, ward, description, created_at')
       .eq('campaign_id', CAMPAIGN_ID)
       .eq('organization_id', ORG_ID)
-      .eq('type', q)
+      .eq('type', normalized)
       .order('created_at', { ascending: false })
       .limit(10);
 
     if (error) return res.status(500).json({ error });
     const lines = data.map((r, i) => `${i + 1}. ${r.category} - ${r.description} (${r.ward})`);
-    const msg = `${q.toUpperCase()} (${data.length}):\n` + (lines.join('\n') || 'None');
+    const msg = `${normalized.toUpperCase()} (${data.length}):\n` + (lines.join('\n') || 'None');
     await sendWhatsAppMessage(phone, msg);
     return res.json({ ok: true });
   }
 
   // Ward filter
   if (q.startsWith('ward ')) {
-    const ward = q.replace('ward ', '').trim();
+    const ward = qRaw.slice(5).trim();
     const { data, error } = await supabase
       .from('reports')
       .select('type, category, description, created_at')
@@ -168,7 +182,7 @@ app.post('/manager-query', async (req, res) => {
 
   // Search
   if (q.startsWith('search ')) {
-    const term = q.replace('search ', '').trim();
+    const term = qRaw.slice(7).trim();
     const { data, error } = await supabase
       .from('reports')
       .select('type, ward, description')
@@ -185,9 +199,11 @@ app.post('/manager-query', async (req, res) => {
     return res.json({ ok: true });
   }
 
+  // Help text
+  const allowedList = Object.keys(ORG_CONFIG.allowedTypes).join(', ');
   await sendWhatsAppMessage(
     phone,
-    `Commands: TODAY, WARD <name>, SEARCH <term>, ISSUES, INCIDENTS, or any type: ${[...allowedTypes].join(', ')}`
+    `Commands: TODAY, WARD <name>, SEARCH <term>, ISSUES, INCIDENTS, or any type: ${allowedList}`
   );
   res.json({ ok: true });
 });
