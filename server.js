@@ -15,7 +15,6 @@ app.use(bodyParser.json());
 
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
 const CAMPAIGN_ID = Number(process.env.CAMPAIGN_ID || 1);
-// org preset for parsing/synonyms: e.g., "default" or "campaign"
 const ORG_ID = process.env.ORG_ID || 'default';
 const ORG_CONFIG = getOrgConfig(ORG_ID);
 
@@ -40,10 +39,10 @@ app.post('/webhook', async (req, res) => {
       return res.sendStatus(200);
     }
 
-    const from = message.from; // phone
+    const from = message.from;
     const text = message.text.body;
 
-    // Is sender a manager?
+    // Manager check
     const { data: mgr, error: mgrError } = await supabase
       .from('users')
       .select('role')
@@ -74,7 +73,7 @@ app.post('/webhook', async (req, res) => {
 
     const { error } = await supabase.from('reports').insert({
       campaign_id: CAMPAIGN_ID,
-      organization_id: ORG_ID, // ensure this column exists in DB
+      organization_id: ORG_ID, // ensure this column exists
       sender_phone: from,
       type: parsed.type,
       category: parsed.category,
@@ -84,7 +83,7 @@ app.post('/webhook', async (req, res) => {
     });
 
     if (error) {
-      console.error(error);
+      console.error('Insert error', error);
       await sendWhatsAppMessage(from, 'Error logging your report. Please try again.');
     } else {
       const locLabel = ORG_CONFIG.labels?.location || 'Location';
@@ -98,17 +97,20 @@ app.post('/webhook', async (req, res) => {
   }
 });
 
-// Manager query endpoint (manual/internal use stays as-is)
+// Manager query endpoint (updated to support all types and org scoping)
 app.post('/manager-query', async (req, res) => {
   const { phone, query } = req.body;
   const q = (query || '').trim().toLowerCase();
+  const allowedTypes = new Set(Object.keys(ORG_CONFIG.allowedTypes));
 
+  // TODAY summary
   if (q === 'today') {
-    const msg = await generateDailySummary(CAMPAIGN_ID);
+    const msg = await generateDailySummary(CAMPAIGN_ID, ORG_ID);
     await sendWhatsAppMessage(phone, msg);
     return res.json({ ok: true });
   }
 
+  // Shortcuts for issues/incidents
   if (q === 'issues' || q === 'incidents') {
     const type = q === 'issues' ? 'issue' : 'incident';
     const { data, error } = await supabase
@@ -122,11 +124,30 @@ app.post('/manager-query', async (req, res) => {
 
     if (error) return res.status(500).json({ error });
     const lines = data.map((r, i) => `${i + 1}. ${r.category} - ${r.description} (${r.ward})`);
-    const msg = `${type.toUpperCase()} (${data.length}):\n` + lines.join('\n');
-    await sendWhatsAppMessage(phone, msg || 'None');
+    const msg = `${type.toUpperCase()} (${data.length}):\n` + (lines.join('\n') || 'None');
+    await sendWhatsAppMessage(phone, msg);
     return res.json({ ok: true });
   }
 
+  // Dynamic type query: e.g., snag, delivery, alert, etc.
+  if (allowedTypes.has(q)) {
+    const { data, error } = await supabase
+      .from('reports')
+      .select('category, ward, description, created_at')
+      .eq('campaign_id', CAMPAIGN_ID)
+      .eq('organization_id', ORG_ID)
+      .eq('type', q)
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (error) return res.status(500).json({ error });
+    const lines = data.map((r, i) => `${i + 1}. ${r.category} - ${r.description} (${r.ward})`);
+    const msg = `${q.toUpperCase()} (${data.length}):\n` + (lines.join('\n') || 'None');
+    await sendWhatsAppMessage(phone, msg);
+    return res.json({ ok: true });
+  }
+
+  // Ward filter
   if (q.startsWith('ward ')) {
     const ward = q.replace('ward ', '').trim();
     const { data, error } = await supabase
@@ -140,11 +161,12 @@ app.post('/manager-query', async (req, res) => {
 
     if (error) return res.status(500).json({ error });
     const lines = data.map((r, i) => `${i + 1}. [${r.type}] ${r.category} - ${r.description}`);
-    const msg = `${ward} Reports (${data.length}):\n` + lines.join('\n');
-    await sendWhatsAppMessage(phone, msg || 'None');
+    const msg = `${ward} Reports (${data.length}):\n` + (lines.join('\n') || 'None');
+    await sendWhatsAppMessage(phone, msg);
     return res.json({ ok: true });
   }
 
+  // Search
   if (q.startsWith('search ')) {
     const term = q.replace('search ', '').trim();
     const { data, error } = await supabase
@@ -158,12 +180,15 @@ app.post('/manager-query', async (req, res) => {
 
     if (error) return res.status(500).json({ error });
     const lines = data.map((r, i) => `${i + 1}. [${r.ward}] ${r.type} - ${r.description}`);
-    const msg = `Search "${term}" (${data.length}):\n` + lines.join('\n');
-    await sendWhatsAppMessage(phone, msg || 'None');
+    const msg = `Search "${term}" (${data.length}):\n` + (lines.join('\n') || 'None');
+    await sendWhatsAppMessage(phone, msg);
     return res.json({ ok: true });
   }
 
-  await sendWhatsAppMessage(phone, 'Commands: ISSUES, INCIDENTS, WARD <name>, TODAY, SEARCH <term>');
+  await sendWhatsAppMessage(
+    phone,
+    `Commands: TODAY, WARD <name>, SEARCH <term>, ISSUES, INCIDENTS, or any type: ${[...allowedTypes].join(', ')}`
+  );
   res.json({ ok: true });
 });
 
@@ -180,10 +205,10 @@ app.get('/reports', async (req, res) => {
   res.json(data);
 });
 
-// Cron job: 7PM Africa/Nairobi daily
+// Cron job: 7PM Africa/Nairobi daily (org-aware summary)
 cron.schedule('0 19 * * *', async () => {
   try {
-    const summary = await generateDailySummary(CAMPAIGN_ID);
+    const summary = await generateDailySummary(CAMPAIGN_ID, ORG_ID);
     const { data: managers } = await supabase
       .from('users')
       .select('phone')

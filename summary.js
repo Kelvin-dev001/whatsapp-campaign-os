@@ -1,31 +1,46 @@
 import { supabase } from './supabase.js';
 
-export async function generateDailySummary(campaignId) {
-  const { data: rows, error } = await supabase
+export async function generateDailySummary(campaignId, orgId = 'default') {
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+  const { data, error } = await supabase
     .from('reports')
-    .select('type, category, ward, description, created_at')
+    .select('type, ward, category')
     .eq('campaign_id', campaignId)
-    .gte('created_at', new Date(new Date().setHours(0,0,0,0)).toISOString());
+    .eq('organization_id', orgId)
+    .gte('created_at', since);
 
-  if (error) throw error;
-  if (!rows.length) return '?? DAILY GROUND REPORT\nNo reports today.';
+  if (error) {
+    console.error('Summary error', error);
+    return 'No data available (error).';
+  }
 
-  const counts = rows.reduce((acc, r) => {
-    acc.total = (acc.total || 0) + 1;
-    acc.type = acc.type || {};
-    acc.type[r.type] = (acc.type[r.type] || 0) + 1;
-    acc.ward = acc.ward || {};
-    acc.ward[r.ward] = (acc.ward[r.ward] || 0) + 1;
+  const total = data.length;
+  if (!total) return 'DAILY GROUND REPORT\nNo reports in the last 24h.';
+
+  const byType = data.reduce((acc, r) => {
+    acc[r.type] = (acc[r.type] || 0) + 1;
+    return acc;
+  }, {});
+  const byWard = data.reduce((acc, r) => {
+    const w = r.ward || 'UNKNOWN';
+    acc[w] = (acc[w] || 0) + 1;
     return acc;
   }, {});
 
-  const topWard = Object.entries(counts.ward).sort((a,b)=>b[1]-a[1])[0];
-  const topType = Object.entries(counts.type).sort((a,b)=>b[1]-a[1])[0];
+  const topType = Object.entries(byType).sort((a, b) => b[1] - a[1])[0];
+  const topWard = Object.entries(byWard).sort((a, b) => b[1] - a[1])[0];
 
-  const lines = [];
-  lines.push('?? DAILY GROUND REPORT');
-  lines.push(`• ${counts.total} reports received`);
-  if (topType) lines.push(`• Top type: ${topType[0]} (${topType[1]})`);
-  if (topWard) lines.push(`• Most active ward: ${topWard[0]} (${topWard[1]})`);
-  return lines.join('\n');
+  const topLines = Object.entries(byType)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([t, c]) => `- ${t}: ${c}`);
+
+  return [
+    `DAILY GROUND REPORT (${total} reports)`,
+    topType ? `â€¢ Top type: ${topType[0]} (${topType[1]})` : 'â€¢ Top type: n/a',
+    topWard ? `â€¢ Top ward: ${topWard[0]} (${topWard[1]})` : 'â€¢ Top ward: n/a',
+    'By type:',
+    ...(topLines.length ? topLines : ['- none'])
+  ].join('\n');
 }
