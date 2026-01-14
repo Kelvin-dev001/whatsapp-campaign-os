@@ -1,5 +1,5 @@
 'use client';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 
 const palette = {
   bg: '#f7f9f7',
@@ -9,42 +9,52 @@ const palette = {
   accent: '#457a55',
   accentDark: '#2f5d3f',
   border: '#dfe6e1',
-  soft: '#eef2ee'
+  soft: '#eef2ee',
+  warn: '#c0392b'
 };
 
-const faqItems = [
+const categories = [
   {
-    q: 'Why not just use WhatsApp groups?',
-    a: 'WhatsApp is great for chatting, not reporting. KwaGround adds structure and summaries — without changing WhatsApp.'
+    id: 'campaign',
+    name: 'Campaign',
+    summary: 'Ward-level issues, incidents, rumors, and daily rollups.',
+    sample: 'INCIDENT blackout Ward5 main transformer'
   },
   {
-    q: 'Why not Google Forms?',
-    a: 'Forms interrupt work. WhatsApp is already where the work happens.'
+    id: 'security',
+    name: 'Security',
+    summary: 'Alerts, SOS, patrol logs, incidents by site.',
+    sample: 'ALERT gate breach Site12 urgent'
   },
   {
-    q: 'Isn’t this too simple?',
-    a: 'Simple is the point. Adoption beats complexity every time.'
+    id: 'construction',
+    name: 'Construction',
+    summary: 'Snags, deliveries, inspections by site.',
+    sample: 'DELIVERY cement SiteA truck arrived'
   },
   {
-    q: 'What about data security?',
-    a: 'We don’t read private chats. Only structured reports sent to the KwaGround number are processed.'
+    id: 'ngo_research',
+    name: 'NGO',
+    summary: 'Surveys, reports, incidents by area.',
+    sample: 'SURVEY malaria nets Area3 25 HH covered'
   },
   {
-    q: 'Can this scale?',
-    a: 'Yes. One manager or 1,000 field officers — same workflow.'
-  },
-  {
-    q: 'Is this only for politics?',
-    a: 'No. Any organization with people on the ground: NGOs, construction, security, research, logistics.'
-  },
-  {
-    q: 'Do managers need a new app?',
-    a: 'No. Managers get summaries and can query via WhatsApp. Optional web dashboard for oversight.'
-  },
-  {
-    q: 'How fast to roll out?',
-    a: 'Under an hour for a pilot. Your team already knows WhatsApp.'
+    id: 'field_sales',
+    name: 'Field Sales',
+    summary: 'Leads, stock, deliveries, POS by store.',
+    sample: 'STOCK milk shortage Store7'
   }
+];
+
+const faqItems = [
+  { q: 'Why not just use WhatsApp groups?', a: 'WhatsApp is great for chatting, not reporting. KwaGround adds structure and summaries — without changing WhatsApp.' },
+  { q: 'Why not Google Forms?', a: 'Forms interrupt work. WhatsApp is already where the work happens.' },
+  { q: 'Isn’t this too simple?', a: 'Simple is the point. Adoption beats complexity every time.' },
+  { q: 'What about data security?', a: 'We don’t read private chats. Only structured reports sent to the KwaGround number are processed.' },
+  { q: 'Can this scale?', a: 'Yes. One manager or 1,000 field officers — same workflow.' },
+  { q: 'Is this only for politics?', a: 'No. Any organization with people on the ground: NGOs, construction, security, research, logistics.' },
+  { q: 'Do managers need a new app?', a: 'No. Managers get summaries and can query via WhatsApp. Optional web dashboard for oversight.' },
+  { q: 'How fast to roll out?', a: 'Under an hour for a pilot. Your team already knows WhatsApp.' }
 ];
 
 const plans = [
@@ -52,59 +62,36 @@ const plans = [
     name: 'Pilot',
     price: '$0',
     note: '7-day guided pilot',
-    features: [
-      'Up to 50 field reports/day',
-      '1 manager number',
-      'Daily summaries',
-      'Basic support'
-    ],
+    features: ['Up to 50 field reports/day', '1 manager number', 'Daily summaries', 'Basic support'],
     cta: 'Start Pilot'
   },
   {
     name: 'Teams',
     price: '$249/mo',
     note: 'Most popular',
-    features: [
-      'Up to 5,000 reports/mo',
-      'Up to 10 managers',
-      'Daily & weekly summaries',
-      'Ward/region filters',
-      'Priority support'
-    ],
+    features: ['Up to 5,000 reports/mo', 'Up to 10 managers', 'Daily & weekly summaries', 'Ward/region filters', 'Priority support'],
     cta: 'Talk to Sales'
   },
   {
     name: 'Scale',
     price: 'Custom',
     note: 'For large orgs',
-    features: [
-      'Unlimited reports',
-      'Role-based access',
-      'Custom workflows',
-      'SLA & training',
-      'Dedicated CSM'
-    ],
+    features: ['Unlimited reports', 'Role-based access', 'Custom workflows', 'SLA & training', 'Dedicated CSM'],
     cta: 'Book a Call'
   }
 ];
 
 const reviews = [
-  {
-    name: 'Operations Lead, Security Firm',
-    quote: 'We cut through the noise. Nightly rollups mean fewer calls and faster shifts.'
-  },
-  {
-    name: 'Program Manager, NGO',
-    quote: 'Volunteers already lived in WhatsApp. KwaGround gave us structure without friction.'
-  },
-  {
-    name: 'Field Director, Campaign',
-    quote: 'We finally see where issues spike. Ward-level summaries changed our mornings.'
-  }
+  { name: 'Operations Lead, Security Firm', quote: 'We cut through the noise. Nightly rollups mean fewer calls and faster shifts.' },
+  { name: 'Program Manager, NGO', quote: 'Volunteers already lived in WhatsApp. KwaGround gave us structure without friction.' },
+  { name: 'Field Director, Campaign', quote: 'We finally see where issues spike. Ward-level summaries changed our mornings.' }
 ];
 
 export default function KwaGroundLanding() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(categories[0].id);
+  const [phone, setPhone] = useState('');
+  const [intentStatus, setIntentStatus] = useState({ state: 'idle', message: '' });
 
   const scrollTo = (id) => {
     const el = document.getElementById(id);
@@ -115,7 +102,7 @@ export default function KwaGroundLanding() {
   const navItems = useMemo(
     () => [
       { label: 'Overview', id: 'hero' },
-      { label: 'How it works', id: 'demo' },
+      { label: 'Demo', id: 'demo' },
       { label: 'Who it’s for', id: 'who' },
       { label: 'Pricing', id: 'pricing' },
       { label: 'FAQ', id: 'faq' },
@@ -123,6 +110,47 @@ export default function KwaGroundLanding() {
     ],
     []
   );
+
+  const currentCategory = useMemo(
+    () => categories.find((c) => c.id === selectedCategory) || categories[0],
+    [selectedCategory]
+  );
+
+  const whatsappLink = useMemo(() => {
+    const text = encodeURIComponent(`DEMO ${currentCategory.name}`);
+    return `https://wa.me/254759293030?text=${text}`;
+  }, [currentCategory]);
+
+  const saveIntent = useCallback(async () => {
+    if (!phone.trim()) {
+      setIntentStatus({ state: 'error', message: 'Enter your phone in E.164 (e.g., +2547xxxxxxx).' });
+      return;
+    }
+    const normalized = phone.trim();
+    const valid = /^\+[1-9]\d{6,14}$/.test(normalized);
+    if (!valid) {
+      setIntentStatus({ state: 'error', message: 'Phone must be E.164 (e.g., +254712345678).' });
+      return;
+    }
+    try {
+      setIntentStatus({ state: 'saving', message: 'Saving your demo intent…' });
+      await fetch('/api/demo-intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: normalized, organization_id: selectedCategory })
+      });
+      setIntentStatus({ state: 'ok', message: 'Saved. Tap “Open WhatsApp Demo” to start.' });
+    } catch (e) {
+      setIntentStatus({ state: 'error', message: 'Could not save. You can still tap WhatsApp to proceed.' });
+    }
+  }, [phone, selectedCategory]);
+
+  // Close mobile menu on resize
+  useEffect(() => {
+    const handler = () => setMenuOpen(false);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
 
   return (
     <main style={styles.page}>
@@ -140,11 +168,7 @@ export default function KwaGroundLanding() {
               </button>
             ))}
           </div>
-          <button
-            style={styles.burger}
-            aria-label="Toggle menu"
-            onClick={() => setMenuOpen((o) => !o)}
-          >
+          <button style={styles.burger} aria-label="Toggle menu" onClick={() => setMenuOpen((o) => !o)}>
             <span style={{ ...styles.burgerLine, ...(menuOpen ? styles.burgerLineOpenTop : {}) }} />
             <span style={{ ...styles.burgerLine, ...(menuOpen ? styles.burgerLineOpenMid : {}) }} />
             <span style={{ ...styles.burgerLine, ...(menuOpen ? styles.burgerLineOpenBot : {}) }} />
@@ -169,7 +193,7 @@ export default function KwaGroundLanding() {
             KwaGround turns WhatsApp updates from the field into clear, structured daily reports.
           </p>
           <div style={styles.ctaRow}>
-            <a href="#demo" style={{ ...styles.cta, ...styles.ctaPrimary }}>Try Live WhatsApp Demo</a>
+            <a href="#demo" style={{ ...styles.cta, ...styles.ctaPrimary }}>Choose a Demo</a>
             <a href="#contact" style={{ ...styles.cta, ...styles.ctaGhost }}>Request a Private Demo</a>
           </div>
           <p style={styles.trust}>No new apps. No training. Just WhatsApp.</p>
@@ -190,25 +214,58 @@ export default function KwaGroundLanding() {
         </div>
       </Section>
 
-      <Section id="what" title="What is KwaGround?">
-        <p style={styles.body}>
-          KwaGround is a reporting tool built on WhatsApp. Field teams send simple updates; KwaGround
-          organizes them and sends managers clear daily summaries. No scrolling. No guessing.
-        </p>
-        <div style={styles.chips}>
-          <span style={styles.chip}>ISSUE water shortage Likoni</span>
-          <span style={styles.chip}>REPORT site visit 12 Nyali</span>
+      <Section id="demo" title="Pick a demo and send your first WhatsApp message.">
+        <div style={styles.cardGrid}>
+          {categories.map((cat) => {
+            const active = cat.id === selectedCategory;
+            return (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.id)}
+                style={{ ...styles.catCard, ...(active ? styles.catCardActive : {}) }}
+              >
+                <div style={styles.catHeader}>
+                  <span style={styles.catName}>{cat.name}</span>
+                  {active && <span style={styles.badge}>Selected</span>}
+                </div>
+                <p style={styles.catSummary}>{cat.summary}</p>
+                <p style={styles.catSample}><strong>Example:</strong> {cat.sample}</p>
+              </button>
+            );
+          })}
         </div>
-      </Section>
 
-      <Section id="demo" title="Try it in 60 seconds.">
-        <ol style={styles.list}>
-          <li>Open WhatsApp</li>
-          <li>Send a report to our demo number</li>
-          <li>See how updates are organized and summarized</li>
-        </ol>
-        <div style={styles.ctaRow}>
-          <a href="#demo-start" style={{ ...styles.cta, ...styles.ctaPrimary }}>Open WhatsApp Demo</a>
+        <div style={styles.demoBox}>
+          <div style={{ display: 'grid', gap: 8 }}>
+            <label style={styles.label}>Your phone (E.164, e.g., +254712345678)</label>
+            <input
+              style={styles.input}
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="+2547xxxxxxxx"
+            />
+            <div style={styles.ctaRow}>
+              <button style={{ ...styles.cta, ...styles.ctaGhost }} onClick={saveIntent}>
+                Save my choice
+              </button>
+              <a href={whatsappLink} target="_blank" rel="noreferrer" style={{ ...styles.cta, ...styles.ctaPrimary }}>
+                Open WhatsApp Demo
+              </a>
+            </div>
+            {intentStatus.state !== 'idle' && (
+              <p
+                style={{
+                  ...styles.statusText,
+                  color: intentStatus.state === 'error' ? palette.warn : palette.sub
+                }}
+              >
+                {intentStatus.message}
+              </p>
+            )}
+            <p style={styles.body}>
+              We’ll remember your choice for this phone for a short time. You can switch any time by selecting another card and sending a new DEMO message.
+            </p>
+          </div>
         </div>
       </Section>
 
@@ -251,9 +308,7 @@ export default function KwaGroundLanding() {
                 <p style={{ ...styles.body, margin: '4px 0' }}>{p.note}</p>
               </div>
               <div style={styles.priceTag}>{p.price}</div>
-              <ul style={styles.priceList}>
-                {p.features.map((f) => <li key={f}>{f}</li>)}
-              </ul>
+              <ul style={styles.priceList}>{p.features.map((f) => <li key={f}>{f}</li>)}</ul>
               <a href="#contact" style={{ ...styles.cta, ...styles.ctaPrimary, width: '100%', textAlign: 'center' }}>
                 {p.cta}
               </a>
@@ -354,217 +409,112 @@ const styles = {
     background: 'transparent',
     backdropFilter: 'blur(8px)'
   },
-  brand: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-    cursor: 'pointer'
-  },
-  logoDot: {
-    width: 34,
-    height: 34,
-    borderRadius: '50%',
-    background: palette.accent
-  },
+  brand: { display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' },
+  logoDot: { width: 34, height: 34, borderRadius: '50%', background: palette.accent },
   brandText: { fontWeight: 700, fontSize: '1.1rem' },
   nav: { position: 'relative', display: 'flex', alignItems: 'center', gap: 12 },
-  navLink: {
-    border: 'none',
-    background: 'transparent',
-    color: palette.sub,
-    fontWeight: 600,
-    cursor: 'pointer'
-  },
+  navLink: { border: 'none', background: 'transparent', color: palette.sub, fontWeight: 600, cursor: 'pointer' },
   burger: {
-    width: 40,
-    height: 36,
-    borderRadius: 10,
-    border: `1px solid ${palette.border}`,
-    background: palette.card,
-    display: 'grid',
-    placeItems: 'center',
-    padding: 0
+    width: 40, height: 36, borderRadius: 10, border: `1px solid ${palette.border}`,
+    background: palette.card, display: 'grid', placeItems: 'center', padding: 0
   },
-  burgerLine: {
-    width: 18,
-    height: 2,
-    background: palette.text,
-    display: 'block',
-    transition: '0.2s ease'
-  },
+  burgerLine: { width: 18, height: 2, background: palette.text, display: 'block', transition: '0.2s ease' },
   burgerLineOpenTop: { transform: 'translateY(4px) rotate(45deg)' },
   burgerLineOpenMid: { opacity: 0 },
   burgerLineOpenBot: { transform: 'translateY(-4px) rotate(-45deg)' },
   mobileMenu: {
-    position: 'absolute',
-    top: 48,
-    right: 0,
-    background: palette.card,
-    border: `1px solid ${palette.border}`,
-    borderRadius: 12,
-    padding: 10,
-    boxShadow: '0 12px 30px rgba(0,0,0,0.08)',
-    display: 'grid',
-    gap: 6,
-    minWidth: 180
+    position: 'absolute', top: 48, right: 0, background: palette.card,
+    border: `1px solid ${palette.border}`, borderRadius: 12, padding: 10,
+    boxShadow: '0 12px 30px rgba(0,0,0,0.08)', display: 'grid', gap: 6, minWidth: 180
   },
   mobileLink: {
-    textAlign: 'left',
-    background: 'transparent',
-    border: 'none',
-    padding: '8px 6px',
-    color: palette.text,
-    fontWeight: 600,
-    cursor: 'pointer'
+    textAlign: 'left', background: 'transparent', border: 'none',
+    padding: '8px 6px', color: palette.text, fontWeight: 600, cursor: 'pointer'
   },
-  gradientWrap: {
-    position: 'absolute',
-    inset: 0,
-    overflow: 'hidden',
-    zIndex: 0,
-    pointerEvents: 'none'
-  },
+  gradientWrap: { position: 'absolute', inset: 0, overflow: 'hidden', zIndex: 0, pointerEvents: 'none' },
   gradient1: {
-    position: 'absolute',
-    width: 320,
-    height: 320,
-    top: -80,
-    right: -120,
+    position: 'absolute', width: 320, height: 320, top: -80, right: -120,
     background: 'radial-gradient(circle at 30% 30%, rgba(69,122,85,0.25), transparent 55%)',
-    filter: 'blur(60px)',
-    animation: 'float1 12s ease-in-out infinite'
+    filter: 'blur(60px)', animation: 'float1 12s ease-in-out infinite'
   },
   gradient2: {
-    position: 'absolute',
-    width: 280,
-    height: 280,
-    top: 180,
-    left: -80,
+    position: 'absolute', width: 280, height: 280, top: 180, left: -80,
     background: 'radial-gradient(circle at 70% 70%, rgba(47,93,63,0.2), transparent 60%)',
-    filter: 'blur(60px)',
-    animation: 'float2 14s ease-in-out infinite'
+    filter: 'blur(60px)', animation: 'float2 14s ease-in-out infinite'
   },
-  hero: {
-    position: 'relative',
-    zIndex: 1,
-    display: 'grid',
-    gap: 18,
-    alignItems: 'center',
-    paddingTop: 12
-  },
+  hero: { position: 'relative', zIndex: 1, display: 'grid', gap: 18, alignItems: 'center', paddingTop: 12 },
   heroText: { display: 'grid', gap: 10, maxWidth: 720 },
   kicker: { letterSpacing: '0.04em', textTransform: 'uppercase', color: palette.sub, fontWeight: 700, fontSize: 12 },
   h1: { fontSize: '2.3rem', lineHeight: 1.2, margin: 0 },
   lead: { fontSize: '1.05rem', color: palette.sub, margin: 0 },
   ctaRow: { display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 4 },
   cta: {
-    padding: '12px 16px',
-    borderRadius: 12,
-    fontWeight: 700,
-    textDecoration: 'none',
-    border: `1px solid ${palette.accentDark}`,
-    transition: 'transform 0.1s ease, box-shadow 0.2s ease'
+    padding: '12px 16px', borderRadius: 12, fontWeight: 700, textDecoration: 'none',
+    border: `1px solid ${palette.accentDark}`, transition: 'transform 0.1s ease, box-shadow 0.2s ease'
   },
-  ctaPrimary: {
-    background: palette.accent,
-    color: '#fff',
-    boxShadow: '0 12px 30px rgba(69,122,85,0.25)'
-  },
-  ctaGhost: {
-    background: 'transparent',
-    color: palette.accentDark
-  },
+  ctaPrimary: { background: palette.accent, color: '#fff', boxShadow: '0 12px 30px rgba(69,122,85,0.25)' },
+  ctaGhost: { background: 'transparent', color: palette.accentDark },
   trust: { color: palette.sub, marginTop: 4 },
   heroCard: {
-    maxWidth: 360,
-    background: palette.card,
-    borderRadius: 16,
-    padding: 16,
-    border: `1px solid ${palette.border}`,
-    boxShadow: '0 12px 28px rgba(0,0,0,0.06)'
+    maxWidth: 360, background: palette.card, borderRadius: 16, padding: 16,
+    border: `1px solid ${palette.border}`, boxShadow: '0 12px 28px rgba(0,0,0,0.06)'
   },
   cardTitle: { margin: '0 0 8px', fontSize: '1rem' },
   codeBox: {
-    background: palette.soft,
-    borderRadius: 12,
-    padding: 12,
-    display: 'grid',
-    gap: 6,
-    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-    fontSize: 14
+    background: palette.soft, borderRadius: 12, padding: 12, display: 'grid', gap: 6,
+    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace', fontSize: 14
   },
   summaryText: { margin: 0, color: palette.sub },
   section: {
-    position: 'relative',
-    zIndex: 1,
-    background: palette.card,
-    borderRadius: 16,
-    padding: '18px 16px',
-    border: `1px solid ${palette.border}`,
-    boxShadow: '0 10px 26px rgba(0,0,0,0.04)',
-    marginTop: 14
+    position: 'relative', zIndex: 1, background: palette.card, borderRadius: 16,
+    padding: '18px 16px', border: `1px solid ${palette.border}`,
+    boxShadow: '0 10px 26px rgba(0,0,0,0.04)', marginTop: 14
   },
   h2: { margin: '0 0 10px', fontSize: '1.3rem' },
   body: { margin: '6px 0', color: palette.sub, lineHeight: 1.6 },
-  chips: { display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 8 },
-  chip: {
-    background: palette.soft,
-    color: palette.text,
-    borderRadius: 999,
-    padding: '8px 12px',
-    border: `1px solid ${palette.border}`,
-    fontFamily: 'ui-monospace, monospace',
-    fontSize: 13
-  },
   list: { margin: '6px 0', paddingLeft: 18, color: palette.sub, lineHeight: 1.5 },
-  pricingGrid: {
-    display: 'grid',
-    gap: 12,
-    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))'
-  },
+  pricingGrid: { display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' },
   priceCard: {
-    background: palette.card,
-    border: `1px solid ${palette.border}`,
-    borderRadius: 14,
-    padding: 14,
-    display: 'grid',
-    gap: 10,
-    boxShadow: '0 8px 24px rgba(0,0,0,0.04)'
+    background: palette.card, border: `1px solid ${palette.border}`, borderRadius: 14,
+    padding: 14, display: 'grid', gap: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.04)'
   },
   priceHeader: { borderBottom: `1px solid ${palette.border}`, paddingBottom: 6 },
   priceTag: { fontSize: '1.8rem', fontWeight: 800 },
   priceList: { paddingLeft: 18, margin: 0, color: palette.sub, lineHeight: 1.5 },
   reviews: { display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' },
   reviewCard: {
-    background: palette.soft,
-    borderRadius: 12,
-    padding: 14,
-    border: `1px solid ${palette.border}`
+    background: palette.soft, borderRadius: 12, padding: 14, border: `1px solid ${palette.border}`
   },
   quote: { margin: '0 0 8px', color: palette.text, lineHeight: 1.5 },
   reviewName: { margin: 0, color: palette.sub, fontWeight: 700 },
   faqGrid: { display: 'grid', gap: 10 },
-  faqItem: {
-    border: `1px solid ${palette.border}`,
-    borderRadius: 12,
-    padding: '10px 12px',
-    background: palette.card
-  },
+  faqItem: { border: `1px solid ${palette.border}`, borderRadius: 12, padding: '10px 12px', background: palette.card },
   faqQ: { cursor: 'pointer', fontWeight: 700 },
   faqA: { margin: '6px 0 0', color: palette.sub, lineHeight: 1.5 },
-  contactBox: {
-    display: 'grid',
-    gap: 10,
-    gridTemplateColumns: '1fr',
-    alignItems: 'center'
+  contactBox: { display: 'grid', gap: 10, gridTemplateColumns: '1fr', alignItems: 'center' },
+  footer: { position: 'relative', zIndex: 1, marginTop: 18, padding: '14px 0', color: palette.sub, fontSize: 14, textAlign: 'center' },
+  cardGrid: { display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', marginBottom: 12 },
+  catCard: {
+    textAlign: 'left', padding: 14, borderRadius: 14, border: `1px solid ${palette.border}`,
+    background: palette.soft, cursor: 'pointer', display: 'grid', gap: 8
   },
-  footer: {
-    position: 'relative',
-    zIndex: 1,
-    marginTop: 18,
-    padding: '14px 0',
-    color: palette.sub,
-    fontSize: 14,
-    textAlign: 'center'
-  }
+  catCardActive: { borderColor: palette.accent, boxShadow: '0 10px 26px rgba(69,122,85,0.12)', background: '#f3f8f4' },
+  catHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
+  catName: { fontWeight: 800 },
+  catSummary: { margin: 0, color: palette.sub, lineHeight: 1.5 },
+  catSample: { margin: 0, color: palette.sub, fontFamily: 'ui-monospace, monospace', fontSize: 13 },
+  badge: {
+    background: palette.accent, color: '#fff', borderRadius: 999, padding: '4px 10px',
+    fontSize: 12, fontWeight: 700
+  },
+  demoBox: {
+    border: `1px solid ${palette.border}`, borderRadius: 14, padding: 14,
+    background: palette.card, boxShadow: '0 10px 24px rgba(0,0,0,0.04)', marginTop: 6
+  },
+  label: { fontWeight: 700, color: palette.sub },
+  input: {
+    borderRadius: 10, border: `1px solid ${palette.border}`, padding: '12px 10px',
+    fontSize: 15, background: '#fff'
+  },
+  statusText: { margin: '4px 0 0', fontSize: 14 },
 };
