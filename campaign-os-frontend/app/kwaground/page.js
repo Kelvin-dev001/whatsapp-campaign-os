@@ -16,7 +16,7 @@ const palette = {
 const categories = [
   {
     id: 'campaign',
-    name: 'Campaign',
+    name: 'Political Campaign',
     summary: 'Ward-level issues, incidents, rumors, and daily rollups.',
     sample: 'INCIDENT blackout Ward5 main transformer'
   },
@@ -24,7 +24,7 @@ const categories = [
     id: 'security',
     name: 'Security',
     summary: 'Alerts, SOS, patrol logs, incidents by site.',
-    sample: 'ALERT gate breach Site12 urgent'
+    sample: 'ALERT gate breach SiteB urgent'
   },
   {
     id: 'construction',
@@ -60,16 +60,16 @@ const faqItems = [
 const plans = [
   {
     name: 'Pilot',
-    price: '$0',
+    price: '0 KES',
     note: '7-day guided pilot',
-    features: ['Up to 50 field reports/day', '1 manager number', 'Daily summaries', 'Basic support'],
+    features: ['Up to 10 field reports/day', '1 manager c', 'Daily summaries', 'Basic support'],
     cta: 'Start Pilot'
   },
   {
     name: 'Teams',
-    price: '$249/mo',
+    price: '3,500 KES /mo',
     note: 'Most popular',
-    features: ['Up to 5,000 reports/mo', 'Up to 10 managers', 'Daily & weekly summaries', 'Ward/region filters', 'Priority support'],
+    features: ['Up to 5,000 reports/mo', 'Up to 3 managers', 'Daily & weekly summaries', 'Ward/region filters', 'Priority support'],
     cta: 'Talk to Sales'
   },
   {
@@ -118,12 +118,12 @@ export default function KwaGroundLanding() {
 
   const whatsappLink = useMemo(() => {
     const text = encodeURIComponent(`DEMO ${currentCategory.name}`);
-    return `https://wa.me/254759293030?text=${text}`;
+    return `https://wa.me/254733447049?text=${text}`;
   }, [currentCategory]);
 
   const saveIntent = useCallback(async () => {
     if (!phone.trim()) {
-      setIntentStatus({ state: 'error', message: 'Enter your phone in E.164 (e.g., +2547xxxxxxx).' });
+      setIntentStatus({ state: 'error', message: 'Enter your phone number (e.g., +2547xxxxxxx).' });
       return;
     }
     const normalized = phone.trim();
@@ -188,7 +188,7 @@ export default function KwaGroundLanding() {
       <Section id="hero" style={styles.hero}>
         <div style={styles.heroText}>
           <p style={styles.kicker}>WhatsApp-native field reporting</p>
-          <h1 style={styles.h1}>Know what’s happening on the ground — instantly.</h1>
+          <h1 style={styles.h1}>You have team on the field? Know what’s happening on the ground instantly!</h1>
           <p style={styles.lead}>
             KwaGround turns WhatsApp updates from the field into clear, structured daily reports.
           </p>
@@ -354,7 +354,7 @@ export default function KwaGroundLanding() {
       </Section>
 
       <footer style={styles.footer}>
-        <span>KwaGround — clarity from the ground up.</span>
+        <span>KwaGround — Mambo si different.</span>
       </footer>
 
       <style jsx global>{`
