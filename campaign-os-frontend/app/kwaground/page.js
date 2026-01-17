@@ -188,7 +188,7 @@ export default function KwaGroundLanding() {
       <Section id="hero" style={styles.hero}>
         <div style={styles.heroText}>
           <p style={styles.kicker}>WhatsApp-native field reporting</p>
-          <h1 style={styles.h1}>You have team on the field? Know what’s happening on the ground instantly!</h1>
+          <h1 style={styles.h1}>You have teams reporting from the field? Skip the WhatsApp chaos and know what’s happening instantly!</h1>
           <p style={styles.lead}>
             KwaGround turns WhatsApp updates from the field into clear, structured daily reports.
           </p>
