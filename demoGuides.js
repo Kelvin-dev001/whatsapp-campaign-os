@@ -1,5 +1,4 @@
-// Production-ready guided responses for demo keywords (field + manager).
-// WhatsApp-friendly copy, concise, non-technical.
+// Add both orders: "<cat> demo" and "demo <cat>"
 
 const fieldDemoGuides = [
   {
@@ -12,7 +11,7 @@ const fieldDemoGuides = [
       'You can also send: INCIDENT trespass Site7.'
   },
   {
-    keywords: ['campaign demo', 'politics demo', 'campaign'],
+    keywords: ['campaign demo', 'demo campaign', 'politics demo', 'demo politics', 'campaign'],
     response:
       'Welcome to KwaGround (Campaign demo).\n' +
       'Share issues/incidents/rumors with ward and details.\n' +
@@ -21,7 +20,7 @@ const fieldDemoGuides = [
       'You can also send: RUMOR vote-buying Ward3.'
   },
   {
-    keywords: ['construction demo', 'construction'],
+    keywords: ['construction demo', 'demo construction', 'construction'],
     response:
       'Welcome to KwaGround (Construction demo).\n' +
       'Log snags, deliveries, inspections with site.\n' +
@@ -30,7 +29,7 @@ const fieldDemoGuides = [
       'You can also send: SNAG crack wall SiteB east wing.'
   },
   {
-    keywords: ['ngo demo', 'ngo', 'research demo', 'field demo'],
+    keywords: ['ngo demo', 'demo ngo', 'research demo', 'demo research', 'field demo', 'demo field'],
     response:
       'Welcome to KwaGround (NGO/Research demo).\n' +
       'Send surveys/reports/incidents with area.\n' +
@@ -39,7 +38,7 @@ const fieldDemoGuides = [
       'You can also send: INCIDENT flood Area2 displaced families.'
   },
   {
-    keywords: ['sales demo', 'field sales demo', 'sales', 'retail demo'],
+    keywords: ['sales demo', 'demo sales', 'field sales demo', 'demo field sales', 'retail demo', 'demo retail'],
     response:
       'Welcome to KwaGround (Field Sales demo).\n' +
       'Share leads/stock/deliveries with store.\n' +
@@ -51,7 +50,7 @@ const fieldDemoGuides = [
 
 const managerDemoGuides = [
   {
-    keywords: ['manager demo', 'view reports', 'today summary demo', 'manager'],
+    keywords: ['manager demo', 'demo manager', 'view reports', 'today summary demo', 'demo today summary', 'manager'],
     response:
       'Manager view (demo):\n' +
       'DAILY GROUND REPORT (sample)\n' +
@@ -65,9 +64,15 @@ const managerDemoGuides = [
   }
 ];
 
+// More forgiving matcher: matches exact, prefix, suffix, or contains
 function matchGuide(list, text) {
   const t = (text || '').trim().toLowerCase();
-  return list.find(({ keywords }) => keywords.some((k) => t === k || t.startsWith(k)));
+  return list.find(({ keywords }) =>
+    keywords.some((k) => {
+      const kk = k.toLowerCase();
+      return t === kk || t.startsWith(kk) || t.endsWith(kk) || t.includes(kk);
+    })
+  );
 }
 
 export function getFieldDemoResponse(text) {
@@ -80,5 +85,4 @@ export function getManagerDemoResponse(text) {
   return hit?.response || null;
 }
 
-// Testing note for managers: send “manager demo” or “today summary demo” to receive
-// the sample summary and the list of demo commands to try.
+// Testing note: send “campaign demo”, “demo ngo”, “demo construction”, “demo sales”, or “manager demo”.
