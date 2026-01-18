@@ -1,5 +1,5 @@
-// Maps demo keywords to guided responses for field demos and manager demos.
-// Keep copy production-ready and non-technical.
+// Production-ready guided responses for demo keywords (field + manager).
+// WhatsApp-friendly copy, concise, non-technical.
 
 const fieldDemoGuides = [
   {
@@ -79,3 +79,6 @@ export function getManagerDemoResponse(text) {
   const hit = matchGuide(managerDemoGuides, text);
   return hit?.response || null;
 }
+
+// Testing note for managers: send “manager demo” or “today summary demo” to receive
+// the sample summary and the list of demo commands to try.
