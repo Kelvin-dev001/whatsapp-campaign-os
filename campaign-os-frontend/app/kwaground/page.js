@@ -13,6 +13,9 @@ const palette = {
   warn: '#c0392b'
 };
 
+// Hero rotating phrases for a light typewriter/rotate effect
+const rotatingPhrases = ['teams on the ground', 'field teams', 'operations teams'];
+
 const categories = [
   {
     id: 'campaign',
@@ -57,27 +60,52 @@ const faqItems = [
   { q: 'How fast to roll out?', a: 'Under an hour for a pilot. Your team already knows WhatsApp.' }
 ];
 
+// Updated Kenya-market pricing (with Most Popular badge)
 const plans = [
   {
-    name: 'Pilot',
-    price: '0 KES',
-    note: '7-day guided pilot',
-    features: ['Up to 10 field reports/day', '1 manager c', 'Daily summaries', 'Basic support'],
-    cta: 'Start Pilot'
+    name: '7-Day Guided Pilot',
+    price: 'KES 2,000',
+    note: 'Guided pilot',
+    features: [
+      'Up to 10 field reports/day',
+      '1 manager number',
+      'System customization per org workflow',
+      'Daily summaries',
+      'Dashboard exports (CSV / PDF)',
+      'Basic support'
+    ],
+    cta: 'Start Pilot',
+    badge: 'Starter'
   },
   {
     name: 'Teams',
-    price: '3,500 KES /mo',
-    note: 'Most popular',
-    features: ['Up to 5,000 reports/mo', 'Up to 3 managers', 'Daily & weekly summaries', 'Ward/region filters', 'Priority support'],
-    cta: 'Talk to Sales'
+    price: 'KES 10,000 /mo',
+    note: 'Most Popular',
+    features: [
+      'Up to 5,000 reports/month',
+      'Up to 5 manager numbers',
+      'Daily & weekly summaries',
+      'Media uploads (images, PDFs, videos)',
+      'System customization per org',
+      'Dashboard exports (CSV / PDF)',
+      'Priority support'
+    ],
+    cta: 'Talk to Sales',
+    badge: 'Most Popular'
   },
   {
     name: 'Scale',
     price: 'Custom',
     note: 'For large orgs',
-    features: ['Unlimited reports', 'Role-based access', 'Custom workflows', 'SLA & training', 'Dedicated CSM'],
-    cta: 'Book a Call'
+    features: [
+      'Unlimited reports',
+      'Role-based access',
+      'Custom workflows',
+      'SLA & training',
+      'Dedicated CSM'
+    ],
+    cta: 'Book a Call',
+    badge: null
   }
 ];
 
@@ -92,6 +120,15 @@ export default function KwaGroundLanding() {
   const [selectedCategory, setSelectedCategory] = useState(categories[0].id);
   const [phone, setPhone] = useState('');
   const [intentStatus, setIntentStatus] = useState({ state: 'idle', message: '' });
+  const [phraseIndex, setPhraseIndex] = useState(0);
+
+  // Rotate hero phrase (lightweight, no heavy animation libs)
+  useEffect(() => {
+    const id = setInterval(() => {
+      setPhraseIndex((prev) => (prev + 1) % rotatingPhrases.length);
+    }, 2400);
+    return () => clearInterval(id);
+  }, []);
 
   const scrollTo = (id) => {
     const el = document.getElementById(id);
@@ -157,7 +194,25 @@ export default function KwaGroundLanding() {
       <GradientBg />
       <header style={styles.header}>
         <div style={styles.brand} onClick={() => scrollTo('hero')}>
-          <div style={styles.logoDot} />
+          {/* WhatsApp icon for instant recognition */}
+          <svg
+            aria-hidden
+            width="28"
+            height="28"
+            viewBox="0 0 32 32"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            style={styles.logoSvg}
+          >
+            <path
+              fill="#25D366"
+              d="M16 3C9.372 3 4 8.198 4 14.6c0 2.444.814 4.705 2.188 6.55L4 29l7.18-1.884C12.89 28 14.41 28.2 16 28.2c6.628 0 12-5.198 12-11.6C28 8.198 22.628 3 16 3Z"
+            />
+            <path
+              fill="#fff"
+              d="M12.7 9.8c-.26-.58-.54-.6-.79-.61-.2-.01-.43-.01-.66-.01-.23 0-.6.09-.92.43-.31.34-1.2 1.17-1.2 2.85 0 1.68 1.23 3.3 1.4 3.52.17.22 2.36 3.69 5.82 5.02 2.88 1.12 3.46.9 4.09.85.63-.05 2.02-.82 2.31-1.61.29-.79.29-1.47.2-1.61-.09-.14-.32-.23-.66-.41-.34-.18-2.02-1-2.34-1.12-.32-.12-.55-.18-.79.18-.24.36-.91 1.12-1.12 1.36-.2.24-.41.27-.75.09-.34-.18-1.44-.52-2.74-1.66-1.01-.9-1.69-2.01-1.89-2.37-.2-.36-.02-.55.15-.73.16-.16.36-.41.54-.61.18-.2.24-.36.36-.6.12-.24.06-.46-.03-.64-.09-.18-.79-1.93-1.11-2.64Z"
+            />
+          </svg>
           <span style={styles.brandText}>KwaGround</span>
         </div>
         <nav style={styles.nav}>
@@ -188,7 +243,13 @@ export default function KwaGroundLanding() {
       <Section id="hero" style={styles.hero}>
         <div style={styles.heroText}>
           <p style={styles.kicker}>WhatsApp-native field reporting</p>
-          <h1 style={styles.h1}>You have teams reporting from the field? Skip the WhatsApp chaos and know what’s happening instantly!</h1>
+          <h1 style={styles.h1}>
+            Know what’s happening with{' '}
+            <span style={styles.rotateWrap}>
+              {rotatingPhrases[phraseIndex]}
+              <span style={styles.cursor}>|</span>
+            </span>
+          </h1>
           <p style={styles.lead}>
             KwaGround turns WhatsApp updates from the field into clear, structured daily reports.
           </p>
@@ -198,22 +259,26 @@ export default function KwaGroundLanding() {
           </div>
           <p style={styles.trust}>No new apps. No training. Just WhatsApp.</p>
         </div>
-        <div style={styles.heroCard}>
-          <h3 style={styles.cardTitle}>Sample inbound</h3>
-          <div style={styles.codeBox}>
-            <code>REPORT Community meeting held in Likoni (25 residents)
-            </code>
-            <code>INCIDENT Youth clash reported in Bangladesh area
-            </code>
-            <code>INCIDENT Youth clash reported – Bangladesh area
-            </code>
+
+        {/* BEFORE vs AFTER section replacing sample inbound/summary */}
+        <div style={styles.beforeAfterWrap}>
+          <div style={styles.beforeCard}>
+            <div style={styles.badgeSoft}>BEFORE KWA GROUND — WhatsApp Chaos</div>
+            <div style={styles.chatBubble}>Good morning</div>
+            <div style={styles.chatBubble}>We are at the site</div>
+            <div style={styles.chatBubble}>Kuna shida hapa 🤦🏽‍♂️</div>
+            <div style={styles.chatBubble}>Water imepasuka</div>
+            <div style={styles.chatBubble}>Likoni side</div>
+            <div style={styles.caption}>Important updates get buried in group chats.</div>
           </div>
-          <h3 style={{ ...styles.cardTitle, marginTop: 16 }}>Sample summary</h3>
-          <p style={styles.summaryText}>
-            • 12 reports today<br />
-            • Top issue: water shortage<br />
-            • Most active ward: Nyali
-          </p>
+          <div style={styles.afterCard}>
+            <div style={styles.badgePrimary}>AFTER KWA GROUND — Clear Structured Report</div>
+            <div style={styles.reportRow}>📍 Location: <strong>Likoni</strong></div>
+            <div style={styles.reportRow}>🚨 Issue: <strong>Water shortage (pipe burst)</strong></div>
+            <div style={styles.reportRow}>📅 Date: <strong>Today</strong></div>
+            <div style={styles.reportRow}>👥 Status: <strong>Reported from the field</strong></div>
+            <div style={styles.caption}>KwaGround turns messages into clarity.</div>
+          </div>
         </div>
       </Section>
 
@@ -307,7 +372,14 @@ export default function KwaGroundLanding() {
           {plans.map((p) => (
             <div key={p.name} style={styles.priceCard}>
               <div style={styles.priceHeader}>
-                <h3 style={{ margin: 0 }}>{p.name}</h3>
+                <div style={styles.priceHeaderRow}>
+                  <h3 style={{ margin: 0 }}>{p.name}</h3>
+                  {p.badge && (
+                    <span style={p.badge === 'Most Popular' ? styles.popularBadge : styles.softBadge}>
+                      {p.badge}
+                    </span>
+                  )}
+                </div>
                 <p style={{ ...styles.body, margin: '4px 0' }}>{p.note}</p>
               </div>
               <div style={styles.priceTag}>{p.price}</div>
@@ -357,7 +429,7 @@ export default function KwaGroundLanding() {
       </Section>
 
       <footer style={styles.footer}>
-        <span>KwaGround — Mambo si different.</span>
+        <span>KwaGround — clarity from the ground up.</span>
       </footer>
 
       <style jsx global>{`
@@ -413,8 +485,8 @@ const styles = {
     backdropFilter: 'blur(8px)'
   },
   brand: { display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' },
-  logoDot: { width: 34, height: 34, borderRadius: '50%', background: palette.accent },
   brandText: { fontWeight: 700, fontSize: '1.1rem' },
+  logoSvg: { width: 32, height: 32 },
   nav: { position: 'relative', display: 'flex', alignItems: 'center', gap: 12 },
   navLink: { border: 'none', background: 'transparent', color: palette.sub, fontWeight: 600, cursor: 'pointer' },
   burger: {
@@ -435,20 +507,23 @@ const styles = {
     padding: '8px 6px', color: palette.text, fontWeight: 600, cursor: 'pointer'
   },
   gradientWrap: { position: 'absolute', inset: 0, overflow: 'hidden', zIndex: 0, pointerEvents: 'none' },
+  // Slightly animated gradients (subtle, low-motion)
   gradient1: {
     position: 'absolute', width: 320, height: 320, top: -80, right: -120,
     background: 'radial-gradient(circle at 30% 30%, rgba(69,122,85,0.25), transparent 55%)',
-    filter: 'blur(60px)', animation: 'float1 12s ease-in-out infinite'
+    filter: 'blur(60px)', animation: 'float1 16s ease-in-out infinite alternate'
   },
   gradient2: {
     position: 'absolute', width: 280, height: 280, top: 180, left: -80,
     background: 'radial-gradient(circle at 70% 70%, rgba(47,93,63,0.2), transparent 60%)',
-    filter: 'blur(60px)', animation: 'float2 14s ease-in-out infinite'
+    filter: 'blur(60px)', animation: 'float2 18s ease-in-out infinite alternate'
   },
   hero: { position: 'relative', zIndex: 1, display: 'grid', gap: 18, alignItems: 'center', paddingTop: 12 },
   heroText: { display: 'grid', gap: 10, maxWidth: 720 },
   kicker: { letterSpacing: '0.04em', textTransform: 'uppercase', color: palette.sub, fontWeight: 700, fontSize: 12 },
   h1: { fontSize: '2.3rem', lineHeight: 1.2, margin: 0 },
+  rotateWrap: { fontWeight: 800, color: palette.accentDark, whiteSpace: 'nowrap' },
+  cursor: { color: palette.accentDark, marginLeft: 2, animation: 'blink 1.4s steps(2, start) infinite' },
   lead: { fontSize: '1.05rem', color: palette.sub, margin: 0 },
   ctaRow: { display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 4 },
   cta: {
@@ -458,35 +533,97 @@ const styles = {
   ctaPrimary: { background: palette.accent, color: '#fff', boxShadow: '0 12px 30px rgba(69,122,85,0.25)' },
   ctaGhost: { background: 'transparent', color: palette.accentDark },
   trust: { color: palette.sub, marginTop: 4 },
-  heroCard: {
-    maxWidth: 360, background: palette.card, borderRadius: 16, padding: 16,
-    border: `1px solid ${palette.border}`, boxShadow: '0 12px 28px rgba(0,0,0,0.06)'
+
+  // BEFORE/AFTER cards
+  beforeAfterWrap: {
+    display: 'grid',
+    gap: 12,
+    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+    width: '100%'
   },
-  cardTitle: { margin: '0 0 8px', fontSize: '1rem' },
-  codeBox: {
-    background: palette.soft, borderRadius: 12, padding: 12, display: 'grid', gap: 6,
-    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace', fontSize: 14
+  beforeCard: {
+    background: palette.card,
+    border: `1px solid ${palette.border}`,
+    borderRadius: 14,
+    padding: 14,
+    boxShadow: '0 8px 24px rgba(0,0,0,0.04)',
+    display: 'grid',
+    gap: 8
   },
-  summaryText: { margin: 0, color: palette.sub },
+  afterCard: {
+    background: palette.soft,
+    border: `1px solid ${palette.border}`,
+    borderRadius: 14,
+    padding: 14,
+    boxShadow: '0 10px 26px rgba(0,0,0,0.06)',
+    display: 'grid',
+    gap: 8
+  },
+  chatBubble: {
+    background: '#e6f4ea',
+    borderRadius: 12,
+    padding: '10px 12px',
+    border: `1px solid ${palette.border}`,
+    color: palette.text,
+    fontSize: 14,
+    lineHeight: 1.4
+  },
+  caption: { color: palette.sub, fontSize: 13 },
+  reportRow: { fontSize: 15, color: palette.text },
+  badgeSoft: {
+    display: 'inline-block',
+    background: '#eef6f0',
+    color: palette.accentDark,
+    padding: '6px 10px',
+    borderRadius: 999,
+    fontWeight: 700,
+    fontSize: 12,
+    border: `1px solid ${palette.border}`
+  },
+  badgePrimary: {
+    display: 'inline-block',
+    background: palette.accent,
+    color: '#fff',
+    padding: '6px 10px',
+    borderRadius: 999,
+    fontWeight: 700,
+    fontSize: 12,
+    border: `1px solid ${palette.accentDark}`
+  },
+
   section: {
-    position: 'relative', zIndex: 1, background: palette.card, borderRadius: 16,
-    padding: '18px 16px', border: `1px solid ${palette.border}`,
-    boxShadow: '0 10px 26px rgba(0,0,0,0.04)', marginTop: 14
+    position: 'relative',
+    zIndex: 1,
+    background: palette.card,
+    borderRadius: 16,
+    padding: '18px 16px',
+    border: `1px solid ${palette.border}`,
+    boxShadow: '0 10px 26px rgba(0,0,0,0.04)',
+    marginTop: 14
   },
   h2: { margin: '0 0 10px', fontSize: '1.3rem' },
   body: { margin: '6px 0', color: palette.sub, lineHeight: 1.6 },
   list: { margin: '6px 0', paddingLeft: 18, color: palette.sub, lineHeight: 1.5 },
   pricingGrid: { display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' },
   priceCard: {
-    background: palette.card, border: `1px solid ${palette.border}`, borderRadius: 14,
-    padding: 14, display: 'grid', gap: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.04)'
+    background: palette.card,
+    border: `1px solid ${palette.border}`,
+    borderRadius: 14,
+    padding: 14,
+    display: 'grid',
+    gap: 10,
+    boxShadow: '0 8px 24px rgba(0,0,0,0.04)'
   },
   priceHeader: { borderBottom: `1px solid ${palette.border}`, paddingBottom: 6 },
+  priceHeaderRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   priceTag: { fontSize: '1.8rem', fontWeight: 800 },
   priceList: { paddingLeft: 18, margin: 0, color: palette.sub, lineHeight: 1.5 },
   reviews: { display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' },
   reviewCard: {
-    background: palette.soft, borderRadius: 12, padding: 14, border: `1px solid ${palette.border}`
+    background: palette.soft,
+    borderRadius: 12,
+    padding: 14,
+    border: `1px solid ${palette.border}`
   },
   quote: { margin: '0 0 8px', color: palette.text, lineHeight: 1.5 },
   reviewName: { margin: 0, color: palette.sub, fontWeight: 700 },
@@ -520,4 +657,29 @@ const styles = {
     fontSize: 15, background: '#fff'
   },
   statusText: { margin: '4px 0 0', fontSize: 14 },
+  popularBadge: {
+    background: '#2f5d3f',
+    color: '#fff',
+    padding: '4px 10px',
+    borderRadius: 999,
+    fontSize: 12,
+    fontWeight: 800
+  },
+  softBadge: {
+    background: '#eef6f0',
+    color: palette.accentDark,
+    padding: '4px 10px',
+    borderRadius: 999,
+    fontSize: 12,
+    fontWeight: 700,
+    border: `1px solid ${palette.border}`
+  }
 };
+
+/* Minimal keyframes for subtle effects */
+const styleSheet = typeof document !== 'undefined' ? document.styleSheets[0] : null;
+if (styleSheet && styleSheet.insertRule) {
+  styleSheet.insertRule('@keyframes blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }', styleSheet.cssRules.length);
+  styleSheet.insertRule('@keyframes float1 { 0% { transform: translate3d(0,0,0); } 100% { transform: translate3d(10px, -6px, 0); } }', styleSheet.cssRules.length);
+  styleSheet.insertRule('@keyframes float2 { 0% { transform: translate3d(0,0,0); } 100% { transform: translate3d(-12px, 8px, 0); } }', styleSheet.cssRules.length);
+}
