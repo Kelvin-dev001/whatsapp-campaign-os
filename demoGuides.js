@@ -1,4 +1,5 @@
-// Add both orders: "<cat> demo" and "demo <cat>"
+// Production-ready guided responses for demo keywords (field + manager).
+// WhatsApp-friendly copy, concise, non-technical.
 
 const fieldDemoGuides = [
   {
@@ -8,7 +9,8 @@ const fieldDemoGuides = [
       'Send alerts/incidents with site and brief.\n' +
       'Format: TYPE details SITE\n' +
       'Example: ALERT gate breach Site12 urgent\n' +
-      'You can also send: INCIDENT trespass Site7.'
+      'You can also send: INCIDENT trespass Site7.\n' +
+      'To see a manager-style summary (demo), send: manager demo'
   },
   {
     keywords: ['campaign demo', 'demo campaign', 'politics demo', 'demo politics', 'campaign'],
@@ -17,7 +19,8 @@ const fieldDemoGuides = [
       'Share issues/incidents/rumors with ward and details.\n' +
       'Format: TYPE details WARD\n' +
       'Example: ISSUE water shortage Ward5 market blocked.\n' +
-      'You can also send: RUMOR vote-buying Ward3.'
+      'You can also send: RUMOR vote-buying Ward3.\n' +
+      'To see a manager-style summary (demo), send: manager demo'
   },
   {
     keywords: ['construction demo', 'demo construction', 'construction'],
@@ -26,7 +29,8 @@ const fieldDemoGuides = [
       'Log snags, deliveries, inspections with site.\n' +
       'Format: TYPE details SITE\n' +
       'Example: DELIVERY cement SiteA truck arrived.\n' +
-      'You can also send: SNAG crack wall SiteB east wing.'
+      'You can also send: SNAG crack wall SiteB east wing.\n' +
+      'To see a manager-style summary (demo), send: manager demo'
   },
   {
     keywords: ['ngo demo', 'demo ngo', 'research demo', 'demo research', 'field demo', 'demo field'],
@@ -35,7 +39,8 @@ const fieldDemoGuides = [
       'Send surveys/reports/incidents with area.\n' +
       'Format: TYPE details AREA\n' +
       'Example: SURVEY malaria nets Area3 25 HH covered.\n' +
-      'You can also send: INCIDENT flood Area2 displaced families.'
+      'You can also send: INCIDENT flood Area2 displaced families.\n' +
+      'To see a manager-style summary (demo), send: manager demo'
   },
   {
     keywords: ['sales demo', 'demo sales', 'field sales demo', 'demo field sales', 'retail demo', 'demo retail'],
@@ -44,7 +49,8 @@ const fieldDemoGuides = [
       'Share leads/stock/deliveries with store.\n' +
       'Format: TYPE details STORE\n' +
       'Example: STOCK milk shortage Store7.\n' +
-      'You can also send: LEAD supermarket Westlands needs POS.'
+      'You can also send: LEAD supermarket Westlands needs POS.\n' +
+      'To see a manager-style summary (demo), send: manager demo'
   }
 ];
 
