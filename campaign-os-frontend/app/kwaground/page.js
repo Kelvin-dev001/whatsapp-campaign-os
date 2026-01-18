@@ -360,7 +360,7 @@ export default function KwaGroundLanding() {
 
       <Section id="trust" title="Built with trust in mind.">
         <ul style={styles.list}>
-          <li>No voter data collection</li>
+          <li>No sensitive data collection</li>
           <li>No unsolicited messaging</li>
           <li>Secure, organization-based data</li>
           <li>WhatsApp-compliant workflows</li>
@@ -392,7 +392,7 @@ export default function KwaGroundLanding() {
         </div>
       </Section>
 
-      <Section id="reviews" title="What teams say">
+      <Section id="reviews" title="What teams will say soon">
         <div style={styles.reviews}>
           {reviews.map((r) => (
             <div key={r.name} style={styles.reviewCard}>
