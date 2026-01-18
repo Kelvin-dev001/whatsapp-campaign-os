@@ -8,6 +8,7 @@ import cron from 'node-cron';
 import { generateDailySummary } from './summary.js';
 import { handleManagerQuery } from './manager.js';
 import { getOrgConfig } from './config/orgConfig.js';
+import { getFieldDemoResponse, getManagerDemoResponse } from './demoGuides.js';
 
 const app = express();
 app.use(cors());
@@ -25,7 +26,6 @@ function normalizeCmdType(token) {
   for (const [normalized, synonyms] of Object.entries(ORG_CONFIG.allowedTypes)) {
     if (normalized === lower) return normalized;
     if (synonyms.some((s) => s.toLowerCase() === lower)) return normalized;
-    // crude plural trim (deliveries -> deliverie); optional but helps
     if (lower.endsWith('s') && normalized === lower.slice(0, -1)) return normalized;
   }
   return null;
@@ -42,7 +42,7 @@ app.get('/webhook', (req, res) => {
   return res.sendStatus(403);
 });
 
-// Webhook receiver (POST) with manager routing and org-aware parsing
+// Webhook receiver (POST) with demo routing, manager routing, and org-aware parsing
 app.post('/webhook', async (req, res) => {
   try {
     const entry = req.body?.entry?.[0];
@@ -53,9 +53,23 @@ app.post('/webhook', async (req, res) => {
     }
 
     const from = message.from;
-    const text = message.text.body;
+    const text = (message.text?.body || '').trim();
 
-    // Manager check
+    // 0) Demo routes (field demos)
+    const fieldDemo = getFieldDemoResponse(text);
+    if (fieldDemo) {
+      await sendWhatsAppMessage(from, fieldDemo);
+      return res.sendStatus(200);
+    }
+
+    // 1) Demo routes (manager demo)
+    const managerDemo = getManagerDemoResponse(text);
+    if (managerDemo) {
+      await sendWhatsAppMessage(from, managerDemo);
+      return res.sendStatus(200);
+    }
+
+    // 2) Manager check (real managers)
     const { data: mgr, error: mgrError } = await supabase
       .from('users')
       .select('role')
@@ -69,7 +83,7 @@ app.post('/webhook', async (req, res) => {
       return res.sendStatus(200);
     }
 
-    // Volunteer flow
+    // 3) Volunteer flow
     const { data: volunteerRow } = await supabase
       .from('volunteers')
       .select('ward')
@@ -86,7 +100,7 @@ app.post('/webhook', async (req, res) => {
 
     const { error } = await supabase.from('reports').insert({
       campaign_id: CAMPAIGN_ID,
-      organization_id: ORG_ID, // ensure this column exists
+      organization_id: ORG_ID,
       sender_phone: from,
       type: parsed.type,
       category: parsed.category,
@@ -110,21 +124,19 @@ app.post('/webhook', async (req, res) => {
   }
 });
 
-// Manager query endpoint (updated to normalize types)
+// Manager query endpoint (unchanged except imports above)
 app.post('/manager-query', async (req, res) => {
   const { phone, query } = req.body;
   const qRaw = (query || '').trim();
   const q = qRaw.toLowerCase();
   const normalized = normalizeCmdType(q);
 
-  // TODAY summary
   if (q === 'today') {
     const msg = await generateDailySummary(CAMPAIGN_ID, ORG_ID);
     await sendWhatsAppMessage(phone, msg);
     return res.json({ ok: true });
   }
 
-  // Shortcuts for issues/incidents
   if (q === 'issues' || q === 'incidents') {
     const type = q === 'issues' ? 'issue' : 'incident';
     const { data, error } = await supabase
@@ -143,7 +155,6 @@ app.post('/manager-query', async (req, res) => {
     return res.json({ ok: true });
   }
 
-  // Dynamic type query: e.g., delivery, snag, alert, etc. (normalized)
   if (normalized) {
     const { data, error } = await supabase
       .from('reports')
@@ -161,7 +172,6 @@ app.post('/manager-query', async (req, res) => {
     return res.json({ ok: true });
   }
 
-  // Ward filter
   if (q.startsWith('ward ')) {
     const ward = qRaw.slice(5).trim();
     const { data, error } = await supabase
@@ -180,7 +190,6 @@ app.post('/manager-query', async (req, res) => {
     return res.json({ ok: true });
   }
 
-  // Search
   if (q.startsWith('search ')) {
     const term = qRaw.slice(7).trim();
     const { data, error } = await supabase
@@ -199,7 +208,6 @@ app.post('/manager-query', async (req, res) => {
     return res.json({ ok: true });
   }
 
-  // Help text
   const allowedList = Object.keys(ORG_CONFIG.allowedTypes).join(', ');
   await sendWhatsAppMessage(
     phone,
@@ -208,7 +216,7 @@ app.post('/manager-query', async (req, res) => {
   res.json({ ok: true });
 });
 
-// Simple public reports feed for dashboard
+// Public reports feed unchanged
 app.get('/reports', async (req, res) => {
   const { data, error } = await supabase
     .from('reports')
@@ -221,7 +229,7 @@ app.get('/reports', async (req, res) => {
   res.json(data);
 });
 
-// Cron job: 7PM Africa/Nairobi daily (org-aware summary)
+// Cron job unchanged
 cron.schedule('0 19 * * *', async () => {
   try {
     const summary = await generateDailySummary(CAMPAIGN_ID, ORG_ID);

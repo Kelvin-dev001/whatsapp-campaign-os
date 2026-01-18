@@ -201,9 +201,12 @@ export default function KwaGroundLanding() {
         <div style={styles.heroCard}>
           <h3 style={styles.cardTitle}>Sample inbound</h3>
           <div style={styles.codeBox}>
-            <code>ISSUE water shortage Likoni</code>
-            <code>REPORT site visit 12 Nyali</code>
-            <code>INCIDENT police harassment market</code>
+            <code>REPORT Community meeting held in Likoni (25 residents)
+            </code>
+            <code>INCIDENT Youth clash reported in Bangladesh area
+            </code>
+            <code>INCIDENT Youth clash reported – Bangladesh area
+            </code>
           </div>
           <h3 style={{ ...styles.cardTitle, marginTop: 16 }}>Sample summary</h3>
           <p style={styles.summaryText}>
